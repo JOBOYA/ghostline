@@ -1,0 +1,13 @@
+[package]
+name = "ghostline-core"
+version = "0.1.0"
+edition = "2021"
+description = "Capture engine for deterministic agent replay"
+license = "MIT"
+
+[dependencies]
+tokio = { version = "1", features = ["fs", "io-util", "sync", "rt"] }
+serde = { version = "1", features = ["derive"] }
+rmp-serde = "1"
+zstd = "0.13"
+sha2 = "0.10"
