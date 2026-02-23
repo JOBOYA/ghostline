@@ -1,0 +1,15 @@
+[package]
+name = "ghostline-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for ghostline — record, replay, inspect .ghostline files"
+license = "MIT"
+
+[[bin]]
+name = "ghostline"
+path = "src/main.rs"
+
+[dependencies]
+ghostline-core = { path = "../ghostline-core" }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
