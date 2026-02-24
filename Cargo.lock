@@ -250,6 +250,7 @@ dependencies = [
  "clap",
  "ghostline-core",
  "hex",
+ "rmp-serde",
  "serde_json",
 ]
 
