@@ -1,3 +1,5 @@
+mod replay;
+
 use base64::Engine;
 use clap::{Parser, Subcommand};
 use ghostline_core::{GhostlineReader, MAGIC};
@@ -142,10 +144,8 @@ fn main() -> anyhow::Result<()> {
             print_data_preview(&frame.response_bytes, "Response");
         }
         Commands::Replay { file, port } => {
-            eprintln!("replay proxy on :{} is not yet implemented", port);
-            eprintln!("file: {}", file);
-            eprintln!("this will intercept API calls and serve cached responses from the recording");
-            std::process::exit(1);
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(replay::run_replay_server(&file, port))?;
         }
     }
 

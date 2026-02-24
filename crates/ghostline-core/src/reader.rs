@@ -4,9 +4,9 @@ use std::io::{self, Read, Seek, SeekFrom};
 use std::path::Path;
 
 #[derive(Debug, Clone)]
-struct IndexEntry {
-    request_hash: [u8; 32],
-    offset: u64,
+pub struct IndexEntry {
+    pub request_hash: [u8; 32],
+    pub offset: u64,
 }
 
 pub struct GhostlineReader<R: Read + Seek> {
@@ -96,6 +96,11 @@ impl<R: Read + Seek> GhostlineReader<R> {
 
     pub fn frame_count(&self) -> usize {
         self.index.len()
+    }
+
+    /// Access raw index entries.
+    pub fn index_entries(&self) -> &[IndexEntry] {
+        &self.index
     }
 
     pub fn get_frame(&mut self, index: usize) -> io::Result<Frame> {
