@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ghostline"
+version = "0.1.0"
+description = "Deterministic replay for AI agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "msgpack>=1.0",
+    "zstandard>=0.21",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.20"]
+openai = ["openai>=1.0"]
+all = ["anthropic>=0.20", "openai>=1.0"]
+dev = ["pytest>=7", "anthropic>=0.20", "openai>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/JOBOYA/ghostline"
+Repository = "https://github.com/JOBOYA/ghostline"
