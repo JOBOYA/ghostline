@@ -2,7 +2,7 @@ import { decompress } from 'fflate';
 import { decode } from '@msgpack/msgpack';
 import type { Frame, Run, NodeType } from './types';
 
-const MAGIC = new Uint8Array([0x47, 0x48, 0x4F, 0x53, 0x54, 0x4C, 0x4E, 0x00]); // GHOSTLN\0
+const MAGIC = new Uint8Array([0x47, 0x48, 0x53, 0x54, 0x4C, 0x49, 0x4E, 0x45]); // GHSTLINE
 
 function readU32LE(view: DataView, offset: number): number {
   return view.getUint32(offset, true);
