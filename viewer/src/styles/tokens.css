@@ -1,0 +1,17 @@
+:root {
+  --bg: #09090B;
+  --surface: #18181B;
+  --border: #27272A;
+  --text: #FAFAFA;
+  --muted: #A1A1AA;
+  --accent-llm: #8B5CF6;
+  --accent-tool: #22D3EE;
+  --accent-branch: #F59E0B;
+  --accent-error: #EF4444;
+  --font-ui: 'Inter', system-ui;
+  --font-mono: 'JetBrains Mono', monospace;
+  --topbar-h: 48px;
+  --statusbar-h: 28px;
+  --side-w: 220px;
+  --detail-w: 360px;
+}
