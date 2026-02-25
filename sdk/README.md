@@ -1,6 +1,6 @@
 # ghostline Python SDK
 
-> **Not yet published.** Coming soon.
+> `pip install ghostline` — available on PyPI
 
 ```python
 pip install ghostline  # soon
