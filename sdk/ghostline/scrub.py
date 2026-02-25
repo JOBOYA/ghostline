@@ -20,8 +20,9 @@ _DEFAULT_PATTERNS: list[tuple[str, str]] = [
     (r"pk_test_[A-Za-z0-9_-]{20,}", "[REDACTED_STRIPE_KEY]"),
     # API keys (generic fallback — after specific patterns)
     (r"sk-[A-Za-z0-9_-]{20,}", "[REDACTED_API_KEY]"),
-    # AWS
+    # AWS (access key ID + secret access key)
     (r"AKIA[A-Z0-9]{16}", "[REDACTED_AWS_KEY]"),
+    (r"(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)[\"']?\s*[:=]\s*[\"']?([A-Za-z0-9/+=]{40})", "[REDACTED_AWS_SECRET]"),
     # GitHub
     (r"ghp_[A-Za-z0-9]{36}", "[REDACTED_GITHUB_TOKEN]"),
     (r"gho_[A-Za-z0-9]{36}", "[REDACTED_GITHUB_TOKEN]"),

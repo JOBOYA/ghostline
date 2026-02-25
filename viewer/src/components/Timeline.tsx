@@ -9,6 +9,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useStore } from '../store/useStore';
 import { TimelineNode } from './TimelineNode';
+import ghostSvg from '../assets/ghost-empty.svg';
 
 const nodeTypes: NodeTypes = {
   ghostFrame: TimelineNode,
@@ -61,13 +62,16 @@ export function Timeline() {
         style={{
           flex: 1,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: 16,
           color: 'var(--muted)',
           fontSize: 15,
         }}
       >
-        Load a .ghostline file to view its timeline
+        <img src={ghostSvg} alt="" width={96} height={96} style={{ opacity: 0.6 }} />
+        <div>Drop a <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-llm)' }}>.ghostline</code> file to view its timeline</div>
       </div>
     );
   }
