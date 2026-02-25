@@ -46,7 +46,7 @@ Ces items DOIVENT être faits AVANT toute publication publique (Show HN, awesome
 
 ## 🟡 Priorité 2 — Distribution
 
-### [DIST-01] Publish sur PyPI
+### [DIST-01] ~~Publish sur PyPI~~ ✅ DONE — pypi.org/project/ghostline/0.1.0
 - **Qui:** DEV
 - **Quoi:** `pip install ghostline` disponible publiquement
 - **Comment:** `cd sdk && python -m build && twine upload dist/*`
