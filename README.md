@@ -205,6 +205,19 @@ ghostline/
 
 ---
 
+## Security
+
+Scrubbing is **enabled by default**. The recorder automatically redacts API keys, tokens, and emails before writing frames to disk. This covers Anthropic, OpenAI, Stripe, AWS, GitHub, and Bearer token patterns.
+
+**Before sharing `.ghostline` files**, verify that no sensitive data remains:
+- Custom secrets not covered by built-in patterns should be added via `ScrubConfig.custom_strings`
+- Prompts and responses may contain business-sensitive content even after key redaction
+- Use `scrub=False` only when you are certain the recording stays local
+
+To report a security issue, email the maintainers directly — do not open a public issue.
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Most wanted:
