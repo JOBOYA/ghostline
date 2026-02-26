@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/ghostline-logo.svg" alt="Ghostline" width="120" />
+  <img src="docs/assets/ghost.svg" alt="Ghostline" width="120" />
 </p>
 
 <h1 align="center">ghostline</h1>
