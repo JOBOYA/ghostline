@@ -1,8 +1,10 @@
+mod proxy;
 mod replay;
 
 use base64::Engine;
 use clap::{Parser, Subcommand};
 use ghostline_core::{GhostlineReader, MAGIC};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "ghostline", version)]
@@ -44,6 +46,18 @@ enum Commands {
         /// Port for the replay proxy
         #[arg(short, long, default_value = "8384")]
         port: u16,
+    },
+    /// Run a transparent recording proxy — forwards requests and captures exchanges
+    Proxy {
+        /// Port for the proxy server
+        #[arg(short, long, default_value = "9000")]
+        port: u16,
+        /// Output directory for .ghostline files
+        #[arg(short, long, default_value = "./ghostline-runs/")]
+        out: PathBuf,
+        /// Target API base URL
+        #[arg(short, long, default_value = "https://api.anthropic.com")]
+        target: String,
     },
 }
 
@@ -146,6 +160,10 @@ fn main() -> anyhow::Result<()> {
         Commands::Replay { file, port } => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(replay::run_replay_server(&file, port))?;
+        }
+        Commands::Proxy { port, out, target } => {
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(proxy::run_proxy(port, out, target))?;
         }
     }
 
