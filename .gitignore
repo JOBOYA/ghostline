@@ -2,4 +2,3 @@
 __pycache__/
 *.pyc
 viewer/node_modules/
-sdk/dist/

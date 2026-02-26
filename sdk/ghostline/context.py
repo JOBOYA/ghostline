@@ -5,24 +5,19 @@ from pathlib import Path
 
 from ghostline.recorder import GhostlineRecorder
 from ghostline.replayer import GhostlineReplayer
-from ghostline.scrub import ScrubConfig
 from ghostline.wrapper import set_recorder, set_replayer
 
 
 @contextmanager
-def record(path: str | Path, scrub: bool | ScrubConfig = False):
+def record(path: str | Path):
     """Record all wrapped API calls to a .ghostline file.
-
-    Args:
-        path: Output file path.
-        scrub: Enable scrubbing. True for defaults, or pass a ScrubConfig.
 
     Usage:
         client = ghostline.wrap(Anthropic())
-        with ghostline.record("run.ghostline", scrub=True):
+        with ghostline.record("run.ghostline"):
             response = client.messages.create(...)
     """
-    recorder = GhostlineRecorder(path, scrub=scrub)
+    recorder = GhostlineRecorder(path)
     recorder.start()
     set_recorder(recorder)
     try:

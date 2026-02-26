@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
+  <a href="#proxy-mode">Proxy Mode</a> ·
   <a href="#why">Why</a> ·
   <a href="#how-it-works">How It Works</a> ·
   <a href="#roadmap">Roadmap</a> ·
@@ -18,7 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-early%20dev-orange" alt="Status" />
+  <img src="https://img.shields.io/pypi/v/ghostline?color=violet" alt="PyPI" />
+  <img src="https://img.shields.io/badge/status-beta-blue" alt="Status" />
   <img src="https://img.shields.io/github/license/JOBOYA/ghostline" alt="License" />
   <img src="https://img.shields.io/badge/rust-%23dea584?logo=rust" alt="Rust" />
   <img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python" />
@@ -49,6 +51,25 @@ with ghostline.replay("run.ghostline"):
 
 ---
 
+## Proxy Mode (Zero Code Changes)
+
+Don't want to modify your code? Use Ghostline as a transparent proxy — works with **any** LLM client (Claude Code, Cursor, LangChain, LiteLLM, anything).
+
+```bash
+# Start the proxy — it records all LLM calls transparently
+ghostline proxy --out ./runs/
+
+# Then run your tool normally, just pointing to the proxy
+ANTHROPIC_BASE_URL=http://localhost:9000 claude "analyze this repo"
+
+# Or with OpenAI-compatible clients
+OPENAI_BASE_URL=http://localhost:9000 python agent.py
+```
+
+Zero code changes. Records everything. Replay any run.
+
+---
+
 ## Why
 
 Every time you re-run an agent to debug, you:
@@ -62,13 +83,13 @@ Ghostline captures every LLM call in a compact binary format. Replays are instan
 
 ### vs. the alternatives
 
-| | LangSmith | Ghostline |
-|:--|:----------|:----------|
-| Model | SaaS, closed source | **Open source, self-hosted** |
-| Focus | Observability | **Deterministic replay** |
-| Debug | Read traces | **Time-travel + branch** |
-| Cost | Per trace | **Zero marginal cost** |
-| Data | Their cloud | **Your machine** |
+| | LangSmith | LangGraph Time Travel | Ghostline |
+|:--|:----------|:----------------------|:----------|
+| Model | SaaS, closed | LangGraph ecosystem only | **Open source, any framework** |
+| Focus | Observability | Replay within LangGraph | **Framework-agnostic replay** |
+| Debug | Read traces | Fork checkpoints | **Time-travel + branch** |
+| Cost | Per trace | Compute per replay | **Zero marginal cost** |
+| Data | Their cloud | Their cloud | **Your machine** |
 
 ---
 
@@ -102,7 +123,7 @@ Compact binary — MessagePack frames + zstd compression + O(1) index.
 [Index: (hash → offset)[] for O(1) lookup]
 ```
 
-Small files. Fast seeks. No JSON bloat.
+Small files. Fast seeks. No JSON bloat. API keys auto-scrubbed before writing.
 
 ---
 
@@ -115,12 +136,28 @@ ghostline inspect run.ghostline
 # Show detailed frame info
 ghostline show run.ghostline --frame 3
 
-# Export to JSON for external tools
-ghostline export run.ghostline -o run.json
+# Start replay proxy server
+ghostline replay run.ghostline
 
-# Replay deterministically (coming soon)
-ghostline replay run.ghostline -- python agent.py
+# Start transparent capture proxy
+ghostline proxy --out ./runs/
+
+# Export to JSON
+ghostline export run.ghostline -o run.json
 ```
+
+---
+
+## Timeline Viewer
+
+Open any `.ghostline` file in the browser viewer:
+
+```bash
+cd viewer && npm run dev
+# drag & drop your .ghostline file
+```
+
+Features: horizontal timeline, per-frame detail, auto-redacted secrets, keyboard navigation (J/K/Enter/Esc).
 
 ---
 
@@ -130,10 +167,10 @@ ghostline replay run.ghostline -- python agent.py
 ghostline/
 ├── crates/
 │   ├── ghostline-core/   # Rust: format, writer, reader, frame types
-│   └── ghostline-cli/    # Rust: record, replay, export, inspect
+│   └── ghostline-cli/    # Rust: record, replay, proxy, export, inspect
 ├── sdk/                  # Python: httpx wrapper, pip package
-├── viewer/               # React: timeline viewer (coming soon)
-├── format/               # Binary format spec
+├── viewer/               # React: timeline viewer
+├── format/               # Binary format spec (SPEC.md)
 └── examples/
 ```
 
@@ -143,12 +180,17 @@ ghostline/
 
 | Milestone | Status |
 |:----------|:-------|
-| `.ghostline` binary format + capture engine | ✅ Done |
+| `.ghostline` binary format + capture engine (Rust) | ✅ Done |
 | Reader + CLI (`inspect`, `show`, `export`) | ✅ Done |
-| Replay CLI (`ghostline replay`) | 🔄 In progress |
-| Python SDK (`pip install ghostline`) | 🔜 Next |
-| Timeline viewer (React) | 🔜 Planned |
+| Replay proxy server (`ghostline replay`) | ✅ Done |
+| Python SDK (`pip install ghostline`) | ✅ Done — v0.1.0 on PyPI |
+| API key scrubbing (15+ patterns, configurable) | ✅ Done |
+| React timeline viewer | ✅ Done |
+| Transparent proxy mode (zero code changes) | 🔜 Next |
 | Branching (fork from step N) | 🔜 Planned |
+| OpenAI + LiteLLM provider support | 🔜 Planned |
+| Vector memory layer (Zvec) — semantic search in replays | 🔜 Planned |
+| Shareable replay exports (standalone HTML) | 🔜 Planned |
 
 ---
 
@@ -158,18 +200,17 @@ ghostline/
 💰 **Zero cost replay** — replays don't spend tokens<br>
 🦀 **Rust core** — fast capture, small binaries<br>
 🐍 **Python SDK** — two-line integration<br>
+🔍 **Auto-scrubbing** — API keys redacted before writing to disk<br>
 📖 **Open source, MIT** — no lock-in, no SaaS required
 
 ---
 
 ## Contributing
 
-Ghostline is early. We welcome contributions — especially around:
-- Provider support (OpenAI, LiteLLM, etc.)
-- Python SDK ergonomics
-- Timeline viewer UX
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Most wanted:
+- Transparent proxy mode (intercept any LLM client)
+- OpenAI + LiteLLM provider support
+- Zvec integration for semantic search in replays
 
 ---
 
