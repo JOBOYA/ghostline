@@ -5,6 +5,7 @@ import { SidePanel } from './components/SidePanel';
 import { Timeline } from './components/Timeline';
 import { DetailPanel } from './components/DetailPanel';
 import { StatusBar } from './components/StatusBar';
+import { SecretsWarning } from './components/SecretsWarning';
 
 export default function App() {
   const selectFrame = useStore((s) => s.selectFrame);
@@ -46,6 +47,7 @@ export default function App() {
         <Timeline />
         <DetailPanel />
       </div>
+      <SecretsWarning />
       <StatusBar />
     </div>
   );
