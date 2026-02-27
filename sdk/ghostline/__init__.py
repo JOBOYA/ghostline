@@ -6,6 +6,7 @@ from ghostline.context import record, replay
 from ghostline.wrapper import wrap
 from ghostline.format import fork
 from ghostline.export_html import export_html
+from ghostline.search import GhostlineIndex
 
 __version__ = "0.1.0"
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "wrap",
     "fork",
     "export_html",
+    "GhostlineIndex",
 ]

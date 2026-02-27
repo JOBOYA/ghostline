@@ -61,6 +61,16 @@ enum Commands {
         #[arg(short, long)]
         output: Option<String>,
     },
+    /// Search frames in a .ghostline file by content (requires Python SDK)
+    Search {
+        /// Path to the .ghostline file
+        file: String,
+        /// Search query
+        query: String,
+        /// Number of results
+        #[arg(short, long, default_value = "5")]
+        top: usize,
+    },
     /// Run a transparent recording proxy — forwards requests and captures exchanges
     Proxy {
         /// Port for the proxy server
@@ -287,6 +297,36 @@ fn main() -> anyhow::Result<()> {
             writer.finish()?;
             println!("Forked {} frames (0..={}) → {}", at + 1, at, out_path);
             println!("Parent run: {}", hex::encode(parent_run_id));
+        }
+        Commands::Search { file, query, top } => {
+            // Delegate to Python SDK for vector search
+            let script = format!(
+                r#"import sys
+sys.path.insert(0, 'sdk')
+from ghostline.search import GhostlineIndex
+idx = GhostlineIndex()
+n = idx.add_file("{file}")
+print(f"Indexed {{n}} frames")
+results = idx.search("{query}", k={top})
+for r in results:
+    fi = r["frame_idx"]
+    sc = r["score"]
+    print(f"  [{{fi}}] score={{sc:.3f}}")
+if not results:
+    print("  No results found.")
+backend = "zvec" if idx.using_zvec else "numpy"
+print(f"Backend: {{backend}}")
+"#
+            );
+            let tmp = std::env::temp_dir().join("ghostline_search.py");
+            std::fs::write(&tmp, &script)?;
+            let status = std::process::Command::new("python3")
+                .arg(&tmp)
+                .status()?;
+            let _ = std::fs::remove_file(&tmp);
+            if !status.success() {
+                anyhow::bail!("search requires Python SDK: pip install ghostline");
+            }
         }
         Commands::Replay { file, port } => {
             let rt = tokio::runtime::Runtime::new()?;
