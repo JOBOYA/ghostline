@@ -23,6 +23,20 @@ pub struct ViewerState {
 }
 
 pub fn router(state: ViewerState) -> Router {
+    // CORS: localhost only — recordings must not be accessible from external origins
+    let cors = CorsLayer::new()
+        .allow_origin([
+            "http://localhost".parse().unwrap(),
+            format!("http://localhost:{}", state.config.viewer.port)
+                .parse()
+                .unwrap(),
+            format!("http://127.0.0.1:{}", state.config.viewer.port)
+                .parse()
+                .unwrap(),
+        ])
+        .allow_methods([axum::http::Method::GET])
+        .allow_headers(tower_http::cors::Any);
+
     Router::new()
         .route("/", get(serve_index))
         .route("/assets/{*path}", get(serve_asset))
@@ -31,7 +45,7 @@ pub fn router(state: ViewerState) -> Router {
         .route("/api/runs/{name}/frames", get(get_run_frames))
         .route("/api/status", get(get_status))
         .route("/ws/live", get(ws_handler))
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .with_state(state)
 }
 
@@ -72,8 +86,29 @@ async fn list_runs() -> impl IntoResponse {
     Json(runs)
 }
 
+/// Sanitize a run name: reject path traversal, enforce .ghostline extension.
+fn sanitize_run_name(name: &str) -> Option<&str> {
+    // Must end with .ghostline
+    if !name.ends_with(".ghostline") {
+        return None;
+    }
+    // Must be a plain filename — no directory separators or traversal sequences
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return None;
+    }
+    // Extra: must not start with a dot (hidden files)
+    if name.starts_with('.') {
+        return None;
+    }
+    Some(name)
+}
+
 async fn get_run(Path(name): Path<String>) -> impl IntoResponse {
-    let path = Config::runs_dir().join(&name);
+    let safe_name = match sanitize_run_name(&name) {
+        Some(n) => n,
+        None => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let path = Config::runs_dir().join(safe_name);
     match std::fs::read(&path) {
         Ok(data) => {
             let mut headers = HeaderMap::new();
@@ -87,7 +122,11 @@ async fn get_run(Path(name): Path<String>) -> impl IntoResponse {
 async fn get_run_frames(Path(name): Path<String>) -> impl IntoResponse {
     use ghostline_core::GhostlineReader;
 
-    let path = Config::runs_dir().join(&name);
+    let safe_name = match sanitize_run_name(&name) {
+        Some(n) => n,
+        None => return (StatusCode::BAD_REQUEST, Json(json!([]))).into_response(),
+    };
+    let path = Config::runs_dir().join(safe_name);
     let mut reader = match GhostlineReader::open(path.to_str().unwrap_or("")) {
         Ok(r) => r,
         Err(_) => return (StatusCode::NOT_FOUND, Json(json!([]))).into_response(),
@@ -154,7 +193,8 @@ pub async fn start(
         frame_count,
     };
     let app = router(state);
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
+    // Bind to localhost only — viewer must not be exposed on the network
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
     eprintln!(" ✓ Viewer serving on  http://localhost:{}", port);
     axum::serve(listener, app).await?;
     Ok(())
