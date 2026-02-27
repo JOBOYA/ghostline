@@ -30,6 +30,39 @@
 
 ## Quick Start
 
+### One command. Zero dependencies.
+
+```bash
+# Install
+curl -fsSL https://ghostline.dev/install.sh | sh
+# Or: cargo install ghostline
+
+# Run
+ghostline
+```
+
+That's it. Ghostline will:
+1. Ask for your Claude Code token (first run only)
+2. Start a proxy on `http://localhost:9000`
+3. Open the live viewer at `http://localhost:5173`
+4. Capture all API calls automatically
+
+Then in a new terminal:
+```bash
+ghostline run claude        # sets ANTHROPIC_BASE_URL automatically
+# Or manually:
+export ANTHROPIC_BASE_URL=http://localhost:9000
+claude
+```
+
+All frames appear live in the browser viewer via WebSocket.
+
+---
+
+## Python SDK (Advanced Usage)
+
+For programmatic access, deterministic unit tests, and CI pipelines:
+
 ```bash
 pip install ghostline
 ```
@@ -53,17 +86,15 @@ with ghostline.replay("run.ghostline"):
 
 ## Proxy Mode (Zero Code Changes)
 
-Don't want to modify your code? Use Ghostline as a transparent proxy — works with **any** LLM client (Claude Code, Cursor, LangChain, LiteLLM, anything).
+Works with **any** LLM client (Claude Code, Cursor, LangChain, LiteLLM, anything).
 
 ```bash
-# Start the proxy — it records all LLM calls transparently
+# Easiest way — ghostline sets ANTHROPIC_BASE_URL for you
+ghostline run claude "analyze this repo"
+
+# Or start proxy separately
 ghostline proxy --out ./runs/
-
-# Then run your tool normally, just pointing to the proxy
 ANTHROPIC_BASE_URL=http://localhost:9000 claude "analyze this repo"
-
-# Or with OpenAI-compatible clients
-OPENAI_BASE_URL=http://localhost:9000 python agent.py
 ```
 
 Zero code changes. Records everything. Replay any run.

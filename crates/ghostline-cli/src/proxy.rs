@@ -8,6 +8,8 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
 
+use crate::viewer_server::FrameSender;
+
 type Writer = GhostlineWriter<BufWriter<std::fs::File>>;
 
 struct ProxyState {
@@ -15,6 +17,8 @@ struct ProxyState {
     client: reqwest::Client,
     writer: Option<Writer>,
     frame_count: usize,
+    frame_tx: Option<FrameSender>,
+    shared_frame_count: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 async fn handle(
@@ -69,10 +73,22 @@ async fn handle(
     }
     s.frame_count += 1;
     let fc = s.frame_count;
+    s.shared_frame_count.store(fc, std::sync::atomic::Ordering::Relaxed);
+
+    // Broadcast frame to WebSocket viewers
+    if let Some(ref tx) = s.frame_tx {
+        let frame_json = serde_json::json!({
+            "index": fc,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "request_size": body_bytes.len(),
+            "response_size": resp_bytes.len(),
+            "latency_ms": latency_ms,
+        });
+        let _ = tx.send(frame_json.to_string());
+    }
     drop(s);
 
-    let now = chrono::Local::now().format("%H:%M:%S");
-    eprintln!("[{}] CAPTURED frame {} | {}ms | {:.1}KB", now, fc, latency_ms, resp_bytes.len() as f64 / 1024.0);
+    crate::banner::print_frame(fc, latency_ms, resp_bytes.len());
 
     let mut rb = Response::builder().status(status.as_u16());
     for (name, value) in resp_headers.iter() {
@@ -85,7 +101,13 @@ async fn handle(
     Ok(rb.body(Body::from(resp_bytes.to_vec())).unwrap())
 }
 
-pub async fn run_proxy(port: u16, out: PathBuf, target: String) -> anyhow::Result<()> {
+pub async fn run_proxy(
+    port: u16,
+    out: PathBuf,
+    target: String,
+    frame_tx: Option<FrameSender>,
+    shared_frame_count: Arc<std::sync::atomic::AtomicUsize>,
+) -> anyhow::Result<()> {
     std::fs::create_dir_all(&out)?;
 
     let now = chrono::Utc::now();
@@ -104,6 +126,8 @@ pub async fn run_proxy(port: u16, out: PathBuf, target: String) -> anyhow::Resul
         client,
         writer: Some(writer),
         frame_count: 0,
+        frame_tx,
+        shared_frame_count,
     }));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
