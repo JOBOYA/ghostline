@@ -5,6 +5,7 @@ from ghostline.replayer import GhostlineReplayer
 from ghostline.context import record, replay
 from ghostline.wrapper import wrap
 from ghostline.format import fork
+from ghostline.export_html import export_html
 
 __version__ = "0.1.0"
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "replay",
     "wrap",
     "fork",
+    "export_html",
 ]

@@ -6,6 +6,7 @@ import { Timeline } from './components/Timeline';
 import { DetailPanel } from './components/DetailPanel';
 import { StatusBar } from './components/StatusBar';
 import { SecretsWarning } from './components/SecretsWarning';
+import { parseGhostline } from './lib/parser';
 
 export default function App() {
   const selectFrame = useStore((s) => s.selectFrame);
@@ -15,9 +16,25 @@ export default function App() {
   const toggleDetail = useStore((s) => s.toggleDetail);
   const detailOpen = useStore((s) => s.detailOpen);
   const setZoom = useStore((s) => s.setZoom);
+  const loadRun = useStore((s) => s.loadRun);
 
   const activeRun = runs.find((r) => r.id === activeRunId);
   const frameCount = activeRun?.frames.length ?? 0;
+
+  // Auto-load embedded .ghostline data (for standalone HTML exports)
+  useEffect(() => {
+    const el = document.getElementById('ghostline-data');
+    if (!el?.textContent) return;
+    try {
+      const raw = atob(el.textContent.trim());
+      const buf = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+      const name = el.getAttribute('data-filename') || 'embedded.ghostline';
+      parseGhostline(buf.buffer, name).then(loadRun).catch(console.error);
+    } catch (e) {
+      console.error('Failed to load embedded ghostline data:', e);
+    }
+  }, [loadRun]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

@@ -21,16 +21,19 @@ enum Commands {
         /// Path to the .ghostline file
         file: String,
     },
-    /// Export a .ghostline file to JSON
+    /// Export a .ghostline file to JSON or standalone HTML
     Export {
         /// Path to the .ghostline file
         file: String,
-        /// Output path (default: stdout)
+        /// Output path (default: stdout for JSON, <file>.html for HTML)
         #[arg(short, long)]
         output: Option<String>,
-        /// Export only frame at this index
+        /// Export only frame at this index (JSON only)
         #[arg(long)]
         frame: Option<usize>,
+        /// Output format: json (default) or html (standalone viewer)
+        #[arg(long, default_value = "json")]
+        format: String,
     },
     /// Show a single frame in detail (request/response preview)
     Show {
@@ -131,33 +134,97 @@ fn main() -> anyhow::Result<()> {
                 println!("  [{}]", i);
             }
         }
-        Commands::Export { file, output, frame: frame_idx } => {
-            let mut reader = GhostlineReader::open(&file)?;
-            let b64 = base64::engine::general_purpose::STANDARD;
+        Commands::Export { file, output, frame: frame_idx, format } => {
+            if format == "html" {
+                // Read the raw .ghostline file
+                let raw = std::fs::read(&file)?;
+                let data_b64 = base64::engine::general_purpose::STANDARD.encode(&raw);
+                let filename = std::path::Path::new(&file)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy();
 
-            let range: Vec<usize> = match frame_idx {
-                Some(idx) => vec![idx],
-                None => (0..reader.frame_count()).collect(),
-            };
+                // Find viewer dist assets relative to executable or via env
+                let viewer_dir = std::env::var("GHOSTLINE_VIEWER_DIST")
+                    .unwrap_or_else(|_| {
+                        // Try relative to current dir
+                        "viewer/dist".to_string()
+                    });
+                let assets_dir = format!("{}/assets", viewer_dir);
 
-            let mut frames = Vec::new();
-            for i in range {
-                let frame = reader.get_frame(i)?;
-                let obj = serde_json::json!({
-                    "frame_index": i,
-                    "request_hash": hex::encode(frame.request_hash),
-                    "latency_ms": frame.latency_ms,
-                    "timestamp": frame.timestamp,
-                    "request_b64": b64.encode(&frame.request_bytes),
-                    "response_b64": b64.encode(&frame.response_bytes),
+                let mut js_content = String::new();
+                let mut css_content = String::new();
+                for entry in std::fs::read_dir(&assets_dir)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    match path.extension().and_then(|e| e.to_str()) {
+                        Some("js") => js_content = std::fs::read_to_string(&path)?,
+                        Some("css") => css_content = std::fs::read_to_string(&path)?,
+                        _ => {}
+                    }
+                }
+
+                if js_content.is_empty() || css_content.is_empty() {
+                    anyhow::bail!(
+                        "viewer assets not found in {}. Run 'cd viewer && npm run build' or set GHOSTLINE_VIEWER_DIST",
+                        assets_dir
+                    );
+                }
+
+                let html = format!(
+                    r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ghostline — {filename}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>{css_content}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script id="ghostline-data" type="application/octet-stream" data-filename="{filename}">{data_b64}</script>
+  <script type="module">{js_content}</script>
+</body>
+</html>"#
+                );
+
+                let out_path = output.unwrap_or_else(|| {
+                    file.trim_end_matches(".ghostline").to_string() + ".html"
                 });
-                frames.push(obj);
-            }
+                std::fs::write(&out_path, &html)?;
+                println!("Exported → {} ({:.1} KB)", out_path, html.len() as f64 / 1024.0);
+            } else {
+                // JSON export
+                let mut reader = GhostlineReader::open(&file)?;
+                let b64 = base64::engine::general_purpose::STANDARD;
 
-            let json = serde_json::to_string_pretty(&frames)?;
-            match output {
-                Some(path) => std::fs::write(&path, &json)?,
-                None => println!("{}", json),
+                let range: Vec<usize> = match frame_idx {
+                    Some(idx) => vec![idx],
+                    None => (0..reader.frame_count()).collect(),
+                };
+
+                let mut frames = Vec::new();
+                for i in range {
+                    let frame = reader.get_frame(i)?;
+                    let obj = serde_json::json!({
+                        "frame_index": i,
+                        "request_hash": hex::encode(frame.request_hash),
+                        "latency_ms": frame.latency_ms,
+                        "timestamp": frame.timestamp,
+                        "request_b64": b64.encode(&frame.request_bytes),
+                        "response_b64": b64.encode(&frame.response_bytes),
+                    });
+                    frames.push(obj);
+                }
+
+                let json = serde_json::to_string_pretty(&frames)?;
+                match output {
+                    Some(path) => std::fs::write(&path, &json)?,
+                    None => println!("{}", json),
+                }
             }
         }
         Commands::Show { file, index } => {
