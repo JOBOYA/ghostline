@@ -3,7 +3,7 @@
 import io
 import tempfile
 
-from ghostline.format import Frame, GhostlineWriter, GhostlineReader
+from ghostline.format import Frame, GhostlineWriter, GhostlineReader, fork
 
 
 def test_frame_roundtrip():
@@ -68,6 +68,45 @@ def test_iteration():
     frames = list(reader)
     assert len(frames) == 5
     assert frames[3].request_bytes == b"req3"
+
+
+def test_fork():
+    """Test fork creates a new file with parent lineage."""
+    with tempfile.NamedTemporaryFile(suffix=".ghostline", delete=False) as f:
+        path = f.name
+        writer = GhostlineWriter(f, started_at=1700000000000)
+        for i in range(5):
+            writer.append(Frame(f"req{i}".encode(), f"res{i}".encode(), i, 1700000000000 + i))
+        writer.finish()
+
+    fork_path = fork(path, at_step=2)
+    try:
+        with open(fork_path, "rb") as f:
+            reader = GhostlineReader(f)
+            assert reader.frame_count == 3  # frames 0, 1, 2
+            assert reader.parent_run_id is not None
+            assert len(reader.parent_run_id) == 32
+            assert reader.fork_at_step == 2
+            assert reader.get_frame(0).request_bytes == b"req0"
+            assert reader.get_frame(2).request_bytes == b"req2"
+    finally:
+        import os
+        os.unlink(fork_path)
+
+
+def test_fork_metadata_roundtrip():
+    """Test that fork metadata is correctly written and read back."""
+    buf = io.BytesIO()
+    parent_id = b"\x42" * 32
+    writer = GhostlineWriter(buf, started_at=99, parent_run_id=parent_id, fork_at_step=7)
+    writer.append(Frame(b"x", b"y", 1, 1))
+    writer.finish()
+
+    buf.seek(0)
+    reader = GhostlineReader(buf)
+    assert reader.parent_run_id == parent_id
+    assert reader.fork_at_step == 7
+    assert reader.frame_count == 1
 
 
 def test_cross_compat_with_rust():

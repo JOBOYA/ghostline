@@ -14,6 +14,8 @@ pub struct GhostlineReader<R: Read + Seek> {
     pub started_at: u64,
     pub version: u32,
     pub git_sha: Option<[u8; 20]>,
+    pub parent_run_id: Option<[u8; 32]>,
+    pub fork_at_step: Option<u32>,
     index: Vec<IndexEntry>,
 }
 
@@ -60,6 +62,18 @@ impl<R: Read + Seek> GhostlineReader<R> {
             None
         };
 
+        // Read fork metadata (v1 extension)
+        let mut has_fork = [0u8; 1];
+        let (parent_run_id, fork_at_step) = if inner.read_exact(&mut has_fork).is_ok() && has_fork[0] == 1 {
+            let mut run_id = [0u8; 32];
+            inner.read_exact(&mut run_id)?;
+            inner.read_exact(&mut buf4)?;
+            let step = u32::from_le_bytes(buf4);
+            (Some(run_id), Some(step))
+        } else {
+            (None, None)
+        };
+
         // Read index from the end
         // Last 8 bytes = index_offset
         inner.seek(SeekFrom::End(-8))?;
@@ -90,6 +104,8 @@ impl<R: Read + Seek> GhostlineReader<R> {
             started_at,
             version,
             git_sha,
+            parent_run_id,
+            fork_at_step,
             index,
         })
     }
@@ -149,6 +165,8 @@ mod tests {
         let header = Header {
             started_at: 1700000000000,
             git_sha: None,
+            parent_run_id: None,
+            fork_at_step: None,
         };
         let mut writer = GhostlineWriter::new(&mut buf, &header).unwrap();
 
@@ -200,6 +218,27 @@ mod tests {
         let mut reader = GhostlineReader::from_reader(Cursor::new(buf)).unwrap();
         let fake_hash = [0u8; 32];
         assert!(reader.lookup_by_hash(&fake_hash).unwrap().is_none());
+    }
+
+    #[test]
+    fn fork_metadata_roundtrip() {
+        let mut buf = Vec::new();
+        let parent_id = [42u8; 32];
+        let header = Header {
+            started_at: 1700000000000,
+            git_sha: None,
+            parent_run_id: Some(parent_id),
+            fork_at_step: Some(5),
+        };
+        let mut writer = GhostlineWriter::new(&mut buf, &header).unwrap();
+        let frame = Frame::new(b"req".to_vec(), b"res".to_vec(), 10, 1700000000000);
+        writer.append(&frame).unwrap();
+        writer.finish().unwrap();
+
+        let reader = GhostlineReader::from_reader(Cursor::new(buf)).unwrap();
+        assert_eq!(reader.parent_run_id, Some(parent_id));
+        assert_eq!(reader.fork_at_step, Some(5));
+        assert_eq!(reader.frame_count(), 1);
     }
 
     #[test]

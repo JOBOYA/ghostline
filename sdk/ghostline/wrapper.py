@@ -39,10 +39,13 @@ def wrap(client):
         _wrap_anthropic(client)
     elif client_type == "OpenAI":
         _wrap_openai(client)
+    elif client_type == "module" and hasattr(client, "completion"):
+        # LiteLLM module: litellm.completion()
+        _wrap_litellm(client)
     else:
         raise ValueError(
             f"unsupported client type: {client_type}. "
-            "Supported: anthropic.Anthropic, openai.OpenAI"
+            "Supported: anthropic.Anthropic, openai.OpenAI, litellm module"
         )
 
     return client
@@ -121,6 +124,37 @@ def _wrap_openai(client):
         return original_create(*args, **kwargs)
 
     client.chat.completions.create = patched_create
+
+
+def _wrap_litellm(module):
+    """Monkey-patch litellm.completion to intercept calls."""
+    original_completion = module.completion
+
+    @wraps(original_completion)
+    def patched_completion(*args, **kwargs):
+        if _active_replayer is not None:
+            req_bytes = _serialize_request(kwargs)
+            cached = _active_replayer.lookup(req_bytes)
+            if cached is not None:
+                data = json.loads(cached)
+                return _reconstruct_openai_response(data)
+            raise LookupError(
+                f"no cached response for request hash "
+                f"{hashlib.sha256(req_bytes).hexdigest()[:16]}"
+            )
+
+        if _active_recorder is not None:
+            req_bytes = _serialize_request(kwargs)
+            t0 = time.monotonic()
+            response = original_completion(*args, **kwargs)
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            resp_bytes = json.dumps(response.model_dump(), default=str).encode()
+            _active_recorder.capture(req_bytes, resp_bytes, latency_ms)
+            return response
+
+        return original_completion(*args, **kwargs)
+
+    module.completion = patched_completion
 
 
 def _reconstruct_anthropic_response(data: dict):

@@ -93,7 +93,7 @@ pub async fn run_proxy(port: u16, out: PathBuf, target: String) -> anyhow::Resul
     let filepath = out.join(&filename);
 
     let file = BufWriter::new(std::fs::File::create(&filepath)?);
-    let header = Header { started_at: now.timestamp_millis() as u64, git_sha: None };
+    let header = Header { started_at: now.timestamp_millis() as u64, git_sha: None, parent_run_id: None, fork_at_step: None };
     let writer = GhostlineWriter::new(file, &header)?;
 
     let client = reqwest::Client::builder().no_proxy().build()?;

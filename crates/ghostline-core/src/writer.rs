@@ -14,6 +14,12 @@ pub struct Header {
     pub started_at: u64,
     /// Optional git SHA of the recorded project.
     pub git_sha: Option<[u8; 20]>,
+    /// Optional parent run ID (SHA-256 of the original file's first frame hash + started_at).
+    /// Set when this file was forked from another run.
+    pub parent_run_id: Option<[u8; 32]>,
+    /// Step index in the parent run where the fork occurred.
+    /// Only meaningful when parent_run_id is Some.
+    pub fork_at_step: Option<u32>,
 }
 
 impl Header {
@@ -30,7 +36,25 @@ impl Header {
                 w.write_all(&[0u8])?;
             }
         }
+        // Fork metadata (v1 extension — readers that don't know about it stop at git_sha)
+        match (&self.parent_run_id, &self.fork_at_step) {
+            (Some(run_id), Some(step)) => {
+                w.write_all(&[1u8])?; // has_fork flag
+                w.write_all(run_id)?;
+                w.write_all(&step.to_le_bytes())?;
+            }
+            _ => {
+                w.write_all(&[0u8])?; // no fork
+            }
+        }
         Ok(())
+    }
+
+    /// Compute the byte size of this header when serialized.
+    pub fn byte_size(&self) -> u64 {
+        let base = 8 + 4 + 8 + 1 + if self.git_sha.is_some() { 20 } else { 0 };
+        let fork = 1 + if self.parent_run_id.is_some() { 32 + 4 } else { 0 };
+        (base + fork) as u64
     }
 }
 
@@ -61,12 +85,10 @@ impl<W: Write> GhostlineWriter<W> {
     /// Create a new writer, immediately writing the file header.
     pub fn new(mut inner: W, header: &Header) -> io::Result<Self> {
         header.write_to(&mut inner)?;
-        // Header size: 8 (magic) + 4 (version) + 8 (timestamp) + 1 (has_sha) + optional 20
-        let header_size = 8 + 4 + 8 + 1 + if header.git_sha.is_some() { 20 } else { 0 };
         Ok(Self {
             inner,
             index: Vec::new(),
-            bytes_written: header_size as u64,
+            bytes_written: header.byte_size(),
         })
     }
 
@@ -135,6 +157,8 @@ mod tests {
         let header = Header {
             started_at: 1700000000000,
             git_sha: None,
+            parent_run_id: None,
+            fork_at_step: None,
         };
 
         let mut writer = GhostlineWriter::new(&mut buf, &header).unwrap();

@@ -4,6 +4,7 @@ from ghostline.recorder import GhostlineRecorder
 from ghostline.replayer import GhostlineReplayer
 from ghostline.context import record, replay
 from ghostline.wrapper import wrap
+from ghostline.format import fork
 
 __version__ = "0.1.0"
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "record",
     "replay",
     "wrap",
+    "fork",
 ]

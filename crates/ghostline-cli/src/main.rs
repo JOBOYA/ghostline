@@ -47,6 +47,17 @@ enum Commands {
         #[arg(short, long, default_value = "8384")]
         port: u16,
     },
+    /// Fork a run at a specific step — creates a new .ghostline with frames 0..=step
+    Fork {
+        /// Path to the source .ghostline file
+        file: String,
+        /// Step index to fork at (inclusive — frames 0..=at are copied)
+        #[arg(long)]
+        at: usize,
+        /// Output path (default: <file>-fork-<step>.ghostline)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
     /// Run a transparent recording proxy — forwards requests and captures exchanges
     Proxy {
         /// Port for the proxy server
@@ -106,6 +117,12 @@ fn main() -> anyhow::Result<()> {
             if let Some(sha) = &reader.git_sha {
                 println!("Git SHA:     {}", hex::encode(sha));
             }
+            if let Some(run_id) = &reader.parent_run_id {
+                println!("Parent run:  {}", hex::encode(run_id));
+                if let Some(step) = reader.fork_at_step {
+                    println!("Forked at:   step {}", step);
+                }
+            }
 
             // Per-frame summary
             for i in 0..reader.frame_count() {
@@ -156,6 +173,53 @@ fn main() -> anyhow::Result<()> {
 
             print_data_preview(&frame.request_bytes, "Request");
             print_data_preview(&frame.response_bytes, "Response");
+        }
+        Commands::Fork { file, at, output } => {
+            use ghostline_core::{GhostlineWriter, Header};
+            use sha2::{Digest, Sha256};
+
+            let mut reader = GhostlineReader::open(&file)?;
+            let frame_count = reader.frame_count();
+
+            if at >= frame_count {
+                anyhow::bail!(
+                    "step {} out of range — file has {} frames (0..{})",
+                    at, frame_count, frame_count - 1
+                );
+            }
+
+            // Compute parent_run_id: SHA-256(started_at || first_frame_hash)
+            let first_frame = reader.get_frame(0)?;
+            let mut hasher = Sha256::new();
+            hasher.update(reader.started_at.to_le_bytes());
+            hasher.update(first_frame.request_hash);
+            let parent_run_id: [u8; 32] = hasher.finalize().into();
+
+            let out_path = output.unwrap_or_else(|| {
+                let stem = file.trim_end_matches(".ghostline");
+                format!("{}-fork-{}.ghostline", stem, at)
+            });
+
+            let out_file = std::fs::File::create(&out_path)?;
+            let mut buf_writer = std::io::BufWriter::new(out_file);
+
+            let header = Header {
+                started_at: reader.started_at,
+                git_sha: reader.git_sha,
+                parent_run_id: Some(parent_run_id),
+                fork_at_step: Some(at as u32),
+            };
+
+            let mut writer = GhostlineWriter::new(&mut buf_writer, &header)?;
+
+            for i in 0..=at {
+                let frame = reader.get_frame(i)?;
+                writer.append(&frame)?;
+            }
+
+            writer.finish()?;
+            println!("Forked {} frames (0..={}) → {}", at + 1, at, out_path);
+            println!("Parent run: {}", hex::encode(parent_run_id));
         }
         Commands::Replay { file, port } => {
             let rt = tokio::runtime::Runtime::new()?;

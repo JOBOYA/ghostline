@@ -56,7 +56,14 @@ class Frame:
 class GhostlineWriter:
     """Write frames to a .ghostline file."""
 
-    def __init__(self, f, started_at: int, git_sha: bytes | None = None):
+    def __init__(
+        self,
+        f,
+        started_at: int,
+        git_sha: bytes | None = None,
+        parent_run_id: bytes | None = None,
+        fork_at_step: int | None = None,
+    ):
         self._f = f
         self._index: list[tuple[bytes, int]] = []
         self._compressor = zstd.ZstdCompressor(level=3)
@@ -68,6 +75,14 @@ class GhostlineWriter:
         if git_sha:
             f.write(b"\x01")
             f.write(git_sha)
+        else:
+            f.write(b"\x00")
+
+        # Fork metadata
+        if parent_run_id and fork_at_step is not None:
+            f.write(b"\x01")
+            f.write(parent_run_id)  # 32 bytes
+            f.write(struct.pack("<I", fork_at_step))
         else:
             f.write(b"\x00")
 
@@ -117,6 +132,15 @@ class GhostlineReader:
         has_sha = f.read(1)
         self.git_sha = f.read(20) if has_sha == b"\x01" else None
 
+        # Read fork metadata
+        has_fork = f.read(1)
+        if has_fork == b"\x01":
+            self.parent_run_id = f.read(32)
+            (self.fork_at_step,) = struct.unpack("<I", f.read(4))
+        else:
+            self.parent_run_id = None
+            self.fork_at_step = None
+
         # Read index from end
         f.seek(-8, 2)
         (index_offset,) = struct.unpack("<Q", f.read(8))
@@ -157,3 +181,51 @@ class GhostlineReader:
     def __iter__(self):
         for i in range(self.frame_count):
             yield self.get_frame(i)
+
+
+def fork(source_path: str, at_step: int, output_path: str | None = None) -> str:
+    """Fork a .ghostline file at a specific step.
+
+    Copies frames 0..=at_step into a new file with parent lineage metadata.
+
+    Args:
+        source_path: Path to the source .ghostline file.
+        at_step: Step index (inclusive) to fork at.
+        output_path: Destination path. Defaults to <source>-fork-<step>.ghostline.
+
+    Returns:
+        Path to the new forked file.
+    """
+    if output_path is None:
+        stem = source_path.removesuffix(".ghostline")
+        output_path = f"{stem}-fork-{at_step}.ghostline"
+
+    with open(source_path, "rb") as f:
+        reader = GhostlineReader(f)
+
+        if at_step >= reader.frame_count:
+            raise IndexError(
+                f"step {at_step} out of range — file has {reader.frame_count} frames"
+            )
+
+        # Compute parent_run_id: SHA-256(started_at || first_frame_hash)
+        first_frame = reader.get_frame(0)
+        parent_run_id = hashlib.sha256(
+            struct.pack("<Q", reader.started_at) + first_frame.request_hash
+        ).digest()
+
+        frames = [reader.get_frame(i) for i in range(at_step + 1)]
+
+    with open(output_path, "wb") as out:
+        writer = GhostlineWriter(
+            out,
+            started_at=reader.started_at,
+            git_sha=reader.git_sha,
+            parent_run_id=parent_run_id,
+            fork_at_step=at_step,
+        )
+        for frame in frames:
+            writer.append(frame)
+        writer.finish()
+
+    return output_path
