@@ -7,12 +7,15 @@ interface State {
   selectedFrameIdx: number | null;
   zoom: number;
   detailOpen: boolean;
+  liveRunName: string | null;
   loadRun: (run: Run) => void;
+  reloadRun: (run: Run) => void;
   setActiveRun: (id: string) => void;
   selectFrame: (idx: number | null) => void;
   setZoom: (z: number) => void;
   toggleDetail: () => void;
   removeRun: (id: string) => void;
+  setLiveRunName: (name: string | null) => void;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -21,6 +24,7 @@ export const useStore = create<State>((set, get) => ({
   selectedFrameIdx: null,
   zoom: 1,
   detailOpen: false,
+  liveRunName: null,
 
   loadRun: (run) =>
     set((s) => ({
@@ -29,6 +33,20 @@ export const useStore = create<State>((set, get) => ({
       selectedFrameIdx: null,
       detailOpen: false,
     })),
+
+  // Replace an existing run (matched by fileName) or add if not found
+  reloadRun: (run) =>
+    set((s) => {
+      const idx = s.runs.findIndex((r) => r.fileName === run.fileName);
+      if (idx === -1) {
+        return { runs: [...s.runs, run], activeRunId: run.id };
+      }
+      const updated = [...s.runs];
+      updated[idx] = { ...run, id: s.runs[idx].id };
+      return { runs: updated };
+    }),
+
+  setLiveRunName: (name) => set({ liveRunName: name }),
 
   setActiveRun: (id) =>
     set({ activeRunId: id, selectedFrameIdx: null, detailOpen: false }),

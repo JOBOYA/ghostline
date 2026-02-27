@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from './store/useStore';
 import { Topbar } from './components/Topbar';
 import { SidePanel } from './components/SidePanel';
@@ -7,6 +7,8 @@ import { DetailPanel } from './components/DetailPanel';
 import { StatusBar } from './components/StatusBar';
 import { SecretsWarning } from './components/SecretsWarning';
 import { parseGhostline } from './lib/parser';
+import { useLiveFrames } from './hooks/useLiveFrames';
+import { fetchRuns, fetchRunData } from './hooks/useAutoLoadRuns';
 
 export default function App() {
   const selectFrame = useStore((s) => s.selectFrame);
@@ -17,9 +19,51 @@ export default function App() {
   const detailOpen = useStore((s) => s.detailOpen);
   const setZoom = useStore((s) => s.setZoom);
   const loadRun = useStore((s) => s.loadRun);
+  const reloadRun = useStore((s) => s.reloadRun);
+  const setLiveRunName = useStore((s) => s.setLiveRunName);
 
   const activeRun = runs.find((r) => r.id === activeRunId);
   const frameCount = activeRun?.frames.length ?? 0;
+
+  // Debounce ref for live run reloads (max once per second)
+  const liveReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch and (re)load a run by name
+  const loadRunByName = useCallback(async (name: string, reload = false) => {
+    try {
+      const buf = await fetchRunData(name);
+      const run = await parseGhostline(buf, name);
+      if (reload) {
+        reloadRun(run);
+      } else {
+        loadRun(run);
+      }
+    } catch (e) {
+      console.warn(`[ghostline] Failed to load run "${name}":`, e);
+    }
+  }, [loadRun, reloadRun]);
+
+  // Auto-load all existing runs from ~/.ghostline/runs/ on mount
+  useEffect(() => {
+    // Only when served from the Ghostline binary
+    if (location.protocol === 'file:' || !location.host) return;
+    fetchRuns().then((runList) => {
+      for (const run of runList) {
+        loadRunByName(run.name, false);
+      }
+    });
+  }, []);
+
+  // Live WebSocket: receive frame metadata, debounce-reload the run file
+  useLiveFrames((frame) => {
+    setLiveRunName(frame.run_name);
+
+    // Debounce: reload at most once per second per live run
+    if (liveReloadTimer.current) clearTimeout(liveReloadTimer.current);
+    liveReloadTimer.current = setTimeout(() => {
+      loadRunByName(frame.run_name, true);
+    }, 1000);
+  });
 
   // Auto-load embedded .ghostline data (for standalone HTML exports)
   useEffect(() => {

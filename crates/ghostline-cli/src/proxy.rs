@@ -19,6 +19,7 @@ struct ProxyState {
     frame_count: usize,
     frame_tx: Option<FrameSender>,
     shared_frame_count: Arc<std::sync::atomic::AtomicUsize>,
+    run_name: String,
 }
 
 async fn handle(
@@ -79,6 +80,7 @@ async fn handle(
     if let Some(ref tx) = s.frame_tx {
         let frame_json = serde_json::json!({
             "index": fc,
+            "run_name": s.run_name,
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "request_size": body_bytes.len(),
             "response_size": resp_bytes.len(),
@@ -128,6 +130,7 @@ pub async fn run_proxy(
         frame_count: 0,
         frame_tx,
         shared_frame_count,
+        run_name: filename.clone(),
     }));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
