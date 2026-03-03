@@ -28,6 +28,20 @@
 
 ---
 
+## Viewer
+
+<p align="center">
+  <img src="docs/screenshots/hero-timeline.png" alt="Ghostline viewer — timeline graph view" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/detail-panel.png" alt="Ghostline viewer — frame detail inspector" width="100%" />
+</p>
+
+The viewer shows your agent's execution as a **live node graph**. Purple nodes = LLM calls. Cyan nodes = tool calls. Click any node to inspect the full request/response payload.
+
+---
+
 ## Quick Start
 
 ### One command. Zero dependencies.
