@@ -3,6 +3,7 @@
 import base64
 import importlib.resources
 import os
+import warnings
 
 # Viewer dist files are bundled relative to the package
 _VIEWER_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "viewer", "dist")
@@ -44,7 +45,18 @@ def export_html(ghostline_path: str, output_path: str | None = None) -> str:
 
     Returns:
         Path to the generated HTML file.
+
+    Warning:
+        The exported HTML contains the full replay data. If the recording
+        was made without scrubbing (scrub=False), it may contain API keys
+        or other secrets. Use ghostline.record(scrub=True) before exporting
+        replays intended for sharing.
     """
+    warnings.warn(
+        "HTML exports embed raw replay data. Ensure recordings were made with "
+        "scrub=True if sharing publicly. See: ghostline.record(scrub=True)",
+        stacklevel=2,
+    )
     if output_path is None:
         output_path = ghostline_path.removesuffix(".ghostline") + ".html"
 
