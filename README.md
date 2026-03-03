@@ -26,6 +26,10 @@
   <img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python" />
 </p>
 
+<p align="center">
+  <img src="docs/assets/viewer-screenshot.png" alt="Ghostline timeline viewer showing an LLM agent trace with 4 frames" width="900" />
+</p>
+
 ---
 
 ## Viewer

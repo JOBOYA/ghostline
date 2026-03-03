@@ -32,6 +32,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Scrub integration lost during remote rebase — fully restored
 - HTML export now shows a warning when scrub mode was not enabled at record time
 - Security audit #18: 3 MEDIUM findings patched (path traversal guard, WS auth, rate limit)
+- Wizard token storage comment corrected — base64 is encoding, not encryption (audit #25 MEDIUM)
+- `install.sh`: added SHA256 checksum verification; downloads and validates `SHA256SUMS` before installing (audit #25 LOW)
+
+### Docs
+- `docs/assets/viewer-screenshot.png` — viewer UI screenshot embedded in README
+- `docs/assets/og-image.png` — purpose-built OG/social preview image (1200×630)
+- Release workflow publishes `SHA256SUMS` file alongside platform binaries
 
 ## [0.1.0] - 2026-02-25
 
