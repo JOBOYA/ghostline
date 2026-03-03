@@ -6,24 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-03
+
 ### Added
-- Branching support: fork a run at any step (`ghostline fork <file> --at <step>`)
-- Header extension for parent lineage tracking (`parent_run_id`, `fork_at_step`)
-- LiteLLM provider support (`ghostline.wrap(litellm)` patches `litellm.completion()`)
-- Shareable HTML exports (`ghostline export <file> --format html`) — standalone, no server needed
-- Semantic search across recordings (`ghostline search <file> <query> --top N`)
-- `GhostlineIndex` class for indexing and querying `.ghostline` files by natural language
-- Transparent proxy mode (`ghostline proxy`) — zero code changes, works with any LLM client
-- `ghostline run` command — sets `ANTHROPIC_BASE_URL` automatically
-- Embedded viewer with WebSocket live streaming (feat/v2-single-binary branch)
-- Scrub warning on HTML export
+- **Single-binary mode** — `ghostline` (no subcommand) launches embedded viewer + capture proxy in one command
+- **Transparent proxy** (`ghostline proxy`) — zero code changes required; works with any LLM client, including Claude Code, Cursor, LangChain, LiteLLM
+- **`ghostline run <command>`** — wraps any command, sets `ANTHROPIC_BASE_URL` automatically
+- **WebSocket live streaming** — frames appear in the viewer in real time as they are captured
+- **Auto-load runs** — viewer lists and opens `.ghostline` files from the run directory automatically
+- **Setup wizard** — first-run wizard for token configuration
+- **Branching** — fork any run at step N (`ghostline fork <file> --at <step>`); tracks `parent_run_id` and `fork_at_step` in file header
+- **LiteLLM provider support** — `ghostline.wrap(litellm)` patches `litellm.completion()` for record/replay
+- **Semantic search** — search frames by natural language (`ghostline search <file> <query> --top N`); uses Zvec when available, numpy cosine fallback on Python 3.13+
+- **Shareable HTML exports** — `ghostline export <file> --format html` produces a standalone `.html` with embedded data; no server required
+- **Ghost favicon** — viewer and exported HTML include the ghost SVG favicon
+- **Live indicator** — pulsing LIVE badge in the viewer status bar during active capture
+- **Install script** — `curl -fsSL https://ghostline.dev/install.sh | sh`
+- **GitHub Actions release workflow** — cross-platform binaries (Linux, macOS arm64/x86, Windows) published on `v*` tag
 
 ### Changed
-- Scrubbing enabled by default in `recorder.py` and `context.py`
+- Scrubbing enabled by default in `recorder.py` and `context.py` (previously opt-in)
+- CORS restricted to localhost origins in viewer server (security hardening)
 
 ### Fixed
-- Scrub integration restored after rebase (commit 6e78934)
-- Security audit findings: 3 MEDIUM patched, 1 LOW patched
+- Scrub integration lost during remote rebase — fully restored
+- HTML export now shows a warning when scrub mode was not enabled at record time
+- Security audit #18: 3 MEDIUM findings patched (path traversal guard, WS auth, rate limit)
 
 ## [0.1.0] - 2026-02-25
 
@@ -40,5 +48,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Cross-compatibility: Python writes ↔ Rust reads
 - Format spec: `format/SPEC.md`
 
-[Unreleased]: https://github.com/JOBOYA/ghostline/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/JOBOYA/ghostline/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/JOBOYA/ghostline/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/JOBOYA/ghostline/releases/tag/v0.1.0

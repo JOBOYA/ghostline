@@ -214,7 +214,7 @@ ghostline/
 | `.ghostline` binary format + capture engine (Rust) | ✅ Done |
 | Reader + CLI (`inspect`, `show`, `export`) | ✅ Done |
 | Replay proxy server (`ghostline replay`) | ✅ Done |
-| Python SDK (`pip install ghostline`) | ✅ Done — v0.1.0 on PyPI |
+| Python SDK (`pip install ghostline`) | ✅ Done — PyPI |
 | API key scrubbing (15+ patterns, configurable) | ✅ Done |
 | React timeline viewer | ✅ Done |
 | Transparent proxy mode (zero code changes) | ✅ Done |
