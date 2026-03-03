@@ -4,11 +4,12 @@ Thanks for your interest! Ghostline is early-stage and we welcome contributions.
 
 ## What We Need Help With
 
-- **Provider support** — OpenAI, LiteLLM, Cohere, etc. (currently Anthropic only)
-- **Python SDK ergonomics** — better decorators, async support, framework integrations
-- **Timeline viewer** — React components, accessibility, keyboard navigation
+- **Provider adapters** — Cohere, Mistral, Google Gemini, local models (Anthropic, OpenAI, LiteLLM already supported)
+- **Python SDK ergonomics** — async support, decorator API, framework integrations (LangChain, CrewAI)
+- **Timeline viewer** — semantic zoom, search within frames, accessibility
+- **Cross-language SDKs** — Go, TypeScript, Ruby ports of the Python SDK
 - **Documentation** — examples, guides, troubleshooting
-- **Testing** — edge cases, large files, cross-platform
+- **Testing** — edge cases, large files, cross-platform, Windows support
 
 ## Getting Started
 

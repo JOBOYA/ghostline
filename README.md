@@ -186,11 +186,12 @@ ghostline/
 | Python SDK (`pip install ghostline`) | ✅ Done — v0.1.0 on PyPI |
 | API key scrubbing (15+ patterns, configurable) | ✅ Done |
 | React timeline viewer | ✅ Done |
-| Transparent proxy mode (zero code changes) | 🔜 Next |
-| Branching (fork from step N) | 🔜 Planned |
-| OpenAI + LiteLLM provider support | 🔜 Planned |
-| Vector memory layer (Zvec) — semantic search in replays | 🔜 Planned |
-| Shareable replay exports (standalone HTML) | 🔜 Planned |
+| Transparent proxy mode (zero code changes) | ✅ Done |
+| Branching (fork from step N) | ✅ Done |
+| OpenAI + LiteLLM provider support | ✅ Done |
+| Vector memory layer (semantic search in replays) | ✅ Done |
+| Shareable replay exports (standalone HTML) | ✅ Done |
+| Single-binary mode (`ghostline` — embedded viewer + WebSocket) | 🔜 Next |
 
 ---
 
@@ -221,9 +222,10 @@ To report a security issue, email the maintainers directly — do not open a pub
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Most wanted:
-- Transparent proxy mode (intercept any LLM client)
-- OpenAI + LiteLLM provider support
-- Zvec integration for semantic search in replays
+- Single-binary distribution with embedded viewer
+- Additional LLM provider adapters
+- Viewer UX improvements (zoom, search, keyboard shortcuts)
+- Cross-language SDK ports (Go, TypeScript)
 
 ---
 
