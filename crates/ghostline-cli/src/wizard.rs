@@ -8,7 +8,7 @@ pub fn run_wizard() -> anyhow::Result<Config> {
         .with_prompt("Enter your Claude Code token\n  (Run `claude config get apiKey` in another terminal to get it)\n  Token")
         .interact_text()?;
 
-    // Base64 obfuscate for storage
+    // Base64-encode for storage (not encrypted — treat config file as sensitive)
     let encoded = base64::Engine::encode(
         &base64::engine::general_purpose::STANDARD,
         token.as_bytes(),

@@ -60,11 +60,28 @@ jobs:
         if: runner.os == 'Windows'
         run: cp target/${{ matrix.target }}/release/ghostline.exe ${{ matrix.artifact }}
 
-      - name: Upload artifact
+      - name: Compute checksum (unix)
+        if: runner.os != 'Windows'
+        run: sha256sum ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
+
+      - name: Compute checksum (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash ${{ matrix.artifact }} -Algorithm SHA256).Hash.ToLower()
+          "$hash  ${{ matrix.artifact }}" | Out-File -Encoding ascii ${{ matrix.artifact }}.sha256
+
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
+
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}.sha256
+          path: ${{ matrix.artifact }}.sha256
 
   release:
     needs: build
@@ -74,8 +91,16 @@ jobs:
         with:
           merge-multiple: true
 
+      - name: Merge checksums into SHA256SUMS
+        run: |
+          cat *.sha256 > SHA256SUMS
+          echo "--- SHA256SUMS ---"
+          cat SHA256SUMS
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ghostline-*
+          files: |
+            ghostline-*
+            SHA256SUMS
           generate_release_notes: true
